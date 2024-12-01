@@ -1,0 +1,47 @@
+#!/bin/bash
+
+# Debug-Logging
+exec 1> >(tee -a /tmp/ffmpeg_script.log)
+exec 2>&1
+echo "Script started at $(date)"
+
+echo "$NAUTILUS_SCRIPT_SELECTED_FILE_PATHS" | while read -r video; do
+    [ -z "$video" ] && continue
+    
+    startzeit=$(zenity --entry \
+        --title="Startzeit eingeben" \
+        --text="Startzeit in Sekunden eingeben (leer für Anfang):")
+    echo "Startzeit: $startzeit"
+    
+    endzeit=$(zenity --entry \
+        --title="Endzeit eingeben" \
+        --text="Endzeit in Sekunden eingeben (leer für Ende):")
+    echo "Endzeit: $endzeit"
+    
+    filename="${video%.*}_dc.mp4"
+    echo "Output filename: $filename"
+    
+    # Berechne Dauer direkt
+    if [ ! -z "$startzeit" ] && [ ! -z "$endzeit" ]; then
+        dauer=$((endzeit - startzeit))
+        echo "Dauer berechnet: $dauer"
+        
+        ffmpeg -y -ss "$startzeit" -i "$video" -t "$dauer" \
+            -c:v libx264 -preset medium \
+            -vf "scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2" \
+            -r 60 -c:a aac -b:a 128k -b:v 4000k -maxrate 4000k -bufsize 8000k \
+            -movflags +faststart -map 0 -map_metadata 0 \
+            "$filename"
+    else
+        ffmpeg -y -i "$video" \
+            -c:v libx264 -preset medium \
+            -vf "scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2" \
+            -r 60 -c:a aac -b:a 128k -b:v 4000k -maxrate 4000k -bufsize 8000k \
+            -movflags +faststart -map 0 -map_metadata 0 \
+            "$filename"
+    fi
+    
+    echo "Command finished with status: $?"
+done
+
+echo "Script finished at $(date)"
