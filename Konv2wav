@@ -13,5 +13,3 @@ echo "$NAUTILUS_SCRIPT_SELECTED_FILE_PATHS" | while read -r video; do
            "$filename" \
            -loglevel error
 done
-
-
